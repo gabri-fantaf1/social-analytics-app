@@ -155,6 +155,8 @@ router.get('/tiktok/callback', async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
     const { access_token, refresh_token, open_id, expires_in } = tokenRes.data;
+    console.log('Risposta token TikTok:', JSON.stringify(tokenRes.data)); 
+    if (!access_token) { throw new Error('TikTok non ha restituito un access_token valido: ' + JSON.stringify(tokenRes.data)); }
 
     const infoRes = await axios.get('https://open.tiktokapis.com/v2/user/info/', {
       headers: { Authorization: `Bearer ${access_token}` },
