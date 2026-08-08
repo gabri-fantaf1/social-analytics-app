@@ -62,4 +62,70 @@ router.get('/accounts/:id/videos', async (req, res) => {
   }
 });
 
+router.get('/history-all', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT a.platform, a.display_name, s.snapshot_date, s.followers
+      FROM account_snapshots s
+      JOIN accounts a ON a.id = s.account_id
+      ORDER BY s.snapshot_date ASC;
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Errore /api/history-all:', err.message);
+    res.status(500).json({ error: 'Errore nel leggere lo storico complessivo' });
+  }
+});
+
+router.get('/videos/top', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        a.platform, a.display_name AS account_name,
+        ci.title, ci.published_at,
+        cs.views, cs.likes, cs.comments, cs.shares,
+        CASE WHEN cs.views > 0
+          THEN ROUND((COALESCE(cs.likes,0) + COALESCE(cs.comments,0))::numeric / cs.views * 100, 2)
+          ELSE NULL
+        END AS engagement_rate
+      FROM content_items ci
+      JOIN accounts a ON a.id = ci.account_id
+      JOIN LATERAL (
+        SELECT * FROM content_snapshots WHERE content_item_id = ci.id ORDER BY snapshot_date DESC LIMIT 1
+      ) cs ON true
+      ORDER BY cs.views DESC NULLS LAST
+      LIMIT 10;
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Errore /api/videos/top:', err.message);
+    res.status(500).json({ error: 'Errore nel leggere i contenuti migliori' });
+  }
+});
+
+router.get('/engagement', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        a.platform,
+        ROUND(AVG(
+          CASE WHEN cs.views > 0
+            THEN (COALESCE(cs.likes,0) + COALESCE(cs.comments,0))::numeric / cs.views * 100
+            ELSE NULL
+          END
+        ), 2) AS avg_engagement_rate
+      FROM content_items ci
+      JOIN accounts a ON a.id = ci.account_id
+      JOIN LATERAL (
+        SELECT * FROM content_snapshots WHERE content_item_id = ci.id ORDER BY snapshot_date DESC LIMIT 1
+      ) cs ON true
+      GROUP BY a.platform;
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Errore /api/engagement:', err.message);
+    res.status(500).json({ error: 'Errore nel leggere engagement' });
+  }
+});
+
 module.exports = router;
