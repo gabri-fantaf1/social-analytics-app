@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Creator OS — Social Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #05060a;
+    --card: rgba(255,255,255,0.03);
+    --card-border: rgba(255,255,255,0.08);
+    --text: #f4f5f9;
+    --muted: #8890a3;
+    --yt: #ff3860;
+    --tt: #22f0c8;
+    --ig: #e04fff;
+    --cyan: #00e5ff;
+    --violet: #8b5cf6;
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 28px 5vw 100px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% -10%, rgba(0,229,255,0.14), transparent 45%),
+      radial-gradient(circle at 90% 0%, rgba(224,79,255,0.12), transparent 40%),
+      radial-gradient(circle at 50% 100%, rgba(139,92,246,0.10), transparent 50%);
+    animation: drift 18s ease-in-out infinite alternate;
+    z-index: -1;
+  }
+  @keyframes drift {
+    0% { transform: translate(0,0) scale(1); }
+    100% { transform: translate(-2%, 2%) scale(1.05); }
+  }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
+  .logo { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cyan); font-weight: 700; }
+  .header h1 {
+    font-size: clamp(28px, 4vw, 42px);
+    margin: 4px 0 0 0;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff 20%, var(--cyan) 60%, var(--ig));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: 480px; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); border-color: rgba(0,229,255,0.4); }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+  .kpi-value { font-size: 32px; font-weight: 800; margin-top: 8px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .kpi-sub { font-size: 12px; color: var(--cyan); margin-top: 6px; font-weight: 500; }
+
+  .section-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-weight: 700;
+    margin: 36px 0 14px 2px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 15px; margin: 0 0 18px 0; color: var(--text); font-weight: 700; }
+
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .pill {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    color: var(--muted);
+  }
+  .pill:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .pill.active { color: var(--bg); background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .dot-youtube { background: var(--yt); color: var(--yt); }
+  .dot-tiktok { background: var(--tt); color: var(--tt); }
+  .dot-instagram { background: var(--ig); color: var(--ig); }
+
+  .comparator-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .comparator-controls select {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .comparator-controls .vs { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--card-border); }
+  th { color: var(--muted); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .rank { color: var(--cyan); font-weight: 800; width: 24px; display: inline-block; }
+  .platform-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+    padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.05);
+    border: 1px solid var(--card-border); text-transform: capitalize; font-weight: 600;
+  }
+  .empty, .loading { color: var(--muted); padding: 40px; text-align: center; font-size: 14px; }
+  canvas { max-height: 320px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">⚡ Creator OS</div>
+    <h1>Le tue analytics, senza filtri</h1>
+    <div class="subtitle">Tutti i numeri di sempre, confrontabili come vuoi tu.</div>
+  </div>
+</div>
+
+<div id="kpiGrid" class="kpi-grid"><p class="loading">Carico i dati...</p></div>
+
+<div class="section-label">Confronta qualsiasi numero con qualsiasi altro</div>
+<div class="panel">
+  <div class="comparator-controls">
+    <select id="metricA"></select>
+    <span class="vs">vs</span>
+    <select id="metricB"></select>
+  </div>
+  <canvas id="comparatorChart"></canvas>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h2>Crescita follower nel tempo</h2>
+    <div class="pill-row" id="platformToggles"></div>
+    <canvas id="growthAllChart"></canvas>
+  </div>
+  <div class="panel">
+    <h2>Profilo piattaforme</h2>
+    <canvas id="radarChart"></canvas>
+  </div>
+</div>
+
+<div class="section-label">Top contenuti · tutte le piattaforme</div>
+<div class="panel">
+  <div id="topVideosTable"><p class="loading">Carico...</p></div>
+</div>
+
+<div class="section-label">Dettaglio account</div>
+<div class="panel">
+  <div class="pill-row" id="accountsRow"></div>
+  <div id="videosTable"><p class="empty">Seleziona un account qui sopra.</p></div>
+</div>
+
+<script>
+const PLATFORM_COLORS = { youtube: '#ff3860', tiktok: '#22f0c8', instagram: '#e04fff' };
+const METRICS = {
+  followers: 'Follower',
+  total_views: 'View totali',
+  total_posts: 'Post/Video pubblicati',
+};
+let accounts = [];
+let visiblePlatforms = new Set();
+let growthChart = null;
+
+function formatNumber(n) {
+  if (n == null) return '—';
+  return new Intl.NumberFormat('it-IT').format(n);
+}
+async function fetchJSON(url) { return (await fetch(url)).json(); }
+
+async function init() {
+  const [accountsData, historyAll, topVideos, engagement] = await Promise.all([
+    fetchJSON('/api/accounts'),
+    fetchJSON('/api/history-all'),
+    fetchJSON('/api/videos/top'),
+    fetchJSON('/api/engagement'),
+  ]);
+  accounts = accountsData;
+  visiblePlatforms = new Set(accounts.map(a => a.platform));
+
+  renderKPIs(accounts, engagement);
+  setupComparator(accounts, engagement);
+  setupPlatformToggles(accounts, historyAll);
+  renderGrowthAll(historyAll);
+  renderRadar(accounts, engagement);
+  renderTopVideos(topVideos);
+  renderAccountChips(accounts);
+
+  window._historyAll = historyAll;
+}
+
+function renderKPIs(accounts, engagement) {
+  const grid = document.getElementById('kpiGrid');
+  if (!accounts.length) {
+    grid.innerHTML = '<p class="empty">Nessun account collegato ancora.</p>';
+    return;
+  }
+  const totalFollowers = accounts.reduce((s, a) => s + (a.followers || 0), 0);
+  const totalViews = accounts.reduce((s, a) => s + (Number(a.total_views) || 0), 0);
+  const totalPosts = accounts.reduce((s, a) => s + (a.total_posts || 0), 0);
+  const avgEng = engagement.length
+    ? (engagement.reduce((s, e) => s + (Number(e.avg_engagement_rate) || 0), 0) / engagement.length).toFixed(2)
+    : null;
+
+  grid.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Follower totali di sempre</div><div class="kpi-value">${formatNumber(totalFollowers)}</div><div class="kpi-sub">su ${accounts.length} piattaforme</div></div>
+    <div class="kpi-card"><div class="kpi-label">View totali di sempre</div><div class="kpi-value">${formatNumber(totalViews)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Contenuti pubblicati</div><div class="kpi-value">${formatNumber(totalPosts)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Engagement medio</div><div class="kpi-value">${avgEng ? avgEng + '%' : '—'}</div><div class="kpi-sub">like+commenti / views</div></div>
+  `;
+}
+
+function setupComparator(accounts, engagement) {
+  const selA = document.getElementById('metricA');
+  const selB = document.getElementById('metricB');
+  const options = Object.entries(METRICS).map(([k, label]) => `<option value="${k}">${label}</option>`).join('');
+  selA.innerHTML = options;
+  selB.innerHTML = options;
+  selB.value = 'total_views';
+
+  const engByPlatform = {};
+  engagement.forEach(e => { engByPlatform[e.platform] = Number(e.avg_engagement_rate) || 0; });
+
+  function metricValue(acc, key) {
+    if (key === 'engagement') return engByPlatform[acc.platform] || 0;
+    return Number(acc[key]) || 0;
+  }
+
+  let comparatorChart = null;
+  function render() {
+    const a = selA.value, b = selB.value;
+    if (comparatorChart) comparatorChart.destroy();
+    comparatorChart = new Chart(document.getElementById('comparatorChart'), {
+      type: 'bar',
+      data: {
+        labels: accounts.map(acc => acc.platform),
+        datasets: [
+          { label: METRICS[a] || a, data: accounts.map(acc => metricValue(acc, a)), backgroundColor: '#00e5ff' },
+          { label: METRICS[b] || b, data: accounts.map(acc => metricValue(acc, b)), backgroundColor: '#e04fff' },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color: '#8890a3' } } },
+        scales: {
+          x: { ticks: { color: '#8890a3' }, grid: { display: false } },
+          y: { ticks: { color: '#8890a3' }, grid: { color: 'rgba(255,255,255,0.06)' } },
+        },
+      },
+    });
+  }
+  selA.onchange = render;
+  selB.onchange = render;
+  render();
+}
+
+function setupPlatformToggles(accounts, historyAll) {
+  const container = document.getElementById('platformToggles');
+  const platforms = [...new Set(accounts.map(a => a.platform))];
+  container.innerHTML = platforms.map(p => `
+    <div class="pill active" data-platform="${p}" onclick="togglePlatform('${p}')">
+      <span class="dot dot-${p}"></span>${p}
+    </div>
+  `).join('');
+}
+
+function togglePlatform(platform) {
+  if (visiblePlatforms.has(platform)) visiblePlatforms.delete(platform);
+  else visiblePlatforms.add(platform);
+  document.querySelectorAll('#platformToggles .pill').forEach(el => {
+    el.classList.toggle('active', visiblePlatforms.has(el.dataset.platform));
+  });
+  renderGrowthAll(window._historyAll);
+}
+
+function renderGrowthAll(historyAll) {
+  const byPlatform = {};
+  historyAll.forEach(row => {
+    if (!visiblePlatforms.has(row.platform)) return;
+    if (!byPlatform[row.platform]) byPlatform[row.platform] = {};
+    byPlatform[row.platform][row.snapshot_date] = row.followers;
+  });
+  const allDates = [...new Set(historyAll.filter(r => visiblePlatforms.has(r.platform)).map(r => r.snapshot_date))].sort();
+  const datasets = Object.keys(byPlatform).map(platform => ({
+    label: platform,
+    data: allDates.map(d => byPlatform[platform][d] ?? null),
+    borderColor: PLATFORM_COLORS[platform] || '#8890a3',
+    backgroundColor: 'transparent',
+    tension: 0.3,
+    spanGaps: true,
+    borderWidth: 2,
+  }));
+
+  if (growthChart) growthChart.destroy();
+  growthChart = new Chart(document.getElementById('growthAllChart'), {
+    type: 'line',
+    data: { labels: allDates.map(d => new Date(d).toLocaleDateString('it-IT')), datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8890a3' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#8890a3' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      },
+    },
+  });
+}
+
+function renderRadar(accounts, engagement) {
+  const engByPlatform = {};
+  engagement.forEach(e => { engByPlatform[e.platform] = Number(e.avg_engagement_rate) || 0; });
+
+  const maxFollowers = Math.max(...accounts.map(a => a.followers || 0), 1);
+  const maxViews = Math.max(...accounts.map(a => Number(a.total_views) || 0), 1);
+  const maxPosts = Math.max(...accounts.map(a => a.total_posts || 0), 1);
+  const maxEng = Math.max(...accounts.map(a => engByPlatform[a.platform] || 0), 1);
+
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: ['Follower', 'View', 'Post', 'Engagement'],
+      datasets: accounts.map(a => ({
+        label: a.platform,
+        data: [
+          (a.followers || 0) / maxFollowers * 100,
+          (Number(a.total_views) || 0) / maxViews * 100,
+          (a.total_posts || 0) / maxPosts * 100,
+          (engByPlatform[a.platform] || 0) / maxEng * 100,
+        ],
+        borderColor: PLATFORM_COLORS[a.platform] || '#8890a3',
+        backgroundColor: (PLATFORM_COLORS[a.platform] || '#8890a3') + '22',
+      })),
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { color: '#8890a3' } } },
+      scales: {
+        r: {
+          angleLines: { color: 'rgba(255,255,255,0.08)' },
+          grid: { color: 'rgba(255,255,255,0.08)' },
+          pointLabels: { color: '#8890a3', font: { size: 11 } },
+          ticks: { display: false },
+        },
+      },
+    },
+  });
+}
+
+function renderTopVideos(videos) {
+  const container = document.getElementById('topVideosTable');
+  if (!videos.length) {
+    container.innerHTML = '<p class="empty">Nessun contenuto salvato ancora su nessuna piattaforma.</p>';
+    return;
+  }
+  container.innerHTML = `
+    <table>
+      <thead><tr><th></th><th>Piattaforma</th><th>Titolo</th><th style="text-align:right">Views</th><th style="text-align:right">Engagement</th></tr></thead>
+      <tbody>
+        ${videos.map((v, i) => `
+          <tr>
+            <td><span class="rank">#${i + 1}</span></td>
+            <td><span class="platform-badge"><span class="dot dot-${v.platform}"></span>${v.platform}</span></td>
+            <td>${escapeHtml(v.title || '(senza titolo)')}</td>
+            <td class="num">${formatNumber(v.views)}</td>
+            <td class="num">${v.engagement_rate != null ? v.engagement_rate + '%' : '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderAccountChips(accounts) {
+  const row = document.getElementById('accountsRow');
+  if (!accounts.length) return;
+  row.innerHTML = accounts.map(a => `
+    <div class="pill" data-id="${a.id}" onclick="selectAccount(${a.id})">
+      <span class="dot dot-${a.platform}"></span>${a.display_name || a.platform}
+    </div>
+  `).join('');
+}
+
+async function selectAccount(id) {
+  document.querySelectorAll('#accountsRow .pill').forEach(el => {
+    el.classList.toggle('active', Number(el.dataset.id) === id);
+  });
+  const videos = await fetchJSON(`/api/accounts/${id}/videos`);
+  const container = document.getElementById('videosTable');
+  if (!videos.length) {
+    container.innerHTML = '<p class="empty">Nessun contenuto salvato ancora per questo account.</p>';
+    return;
+  }
+  container.innerHTML = `
+    <table>
+      <thead><tr><th>Titolo</th><th>Pubblicato</th><th style="text-align:right">Views</th><th style="text-align:right">Like</th><th style="text-align:right">Commenti</th></tr></thead>
+      <tbody>
+        ${videos.map(v => `
+          <tr>
+            <td>${escapeHtml(v.title || '(senza titolo)')}</td>
+            <td>${v.published_at ? new Date(v.published_at).toLocaleDateString('it-IT') : '—'}</td>
+            <td class="num">${formatNumber(v.views)}</td>
+            <td class="num">${formatNumber(v.likes)}</td>
+            <td class="num">${formatNumber(v.comments)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+init();
+</script>
+
+</body>
+</html>
